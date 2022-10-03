@@ -17,10 +17,14 @@ namespace WAVYMusic
         private bool _haveScheduledLoop;
         private double _loopTime;
 
+        /// <summary>
+        /// The current volume of this <see cref="WAVYMusicTrack"/>.
+        /// </summary>
         public float Volume { get => Source.volume; set => Source.volume = value; }
 
         private void Start()
         {
+            // Get component if it's null
             if (Source == null)
             {
                 Source = GetComponent<AudioSource>();
@@ -29,6 +33,7 @@ namespace WAVYMusic
 
         private void Update()
         {
+            // Add this track automatically back to the Available Tracks queue if it has stopped playing
             if (_playing && !Source.isPlaying)
             {
                 _playing = false;
@@ -101,11 +106,11 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Fades this track out for <paramref name="fadeDuration"/> seconds and will make this song stop playing completely after the fade.
+        /// Stops this track instantly and makes it stop playing.
         /// </summary>
-        public void StopSong(float fadeDuration)
+        public void Stop()
         {
-
+            Source.Stop();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -39,17 +40,18 @@ namespace WAVYMusic
             }
         }
 
-        private static List<WAVYMusicTrack> _tracks = new List<WAVYMusicTrack>();
+        private readonly static List<WAVYMusicTrack> _tracks = new List<WAVYMusicTrack>();
 
         /// <summary>
         /// A list of all the <see cref="WAVYMusicTrack"/> which are available for use currently.
         /// </summary>
-        public static Queue<WAVYMusicTrack> AvailableTracks = new Queue<WAVYMusicTrack>();
+        public readonly static Queue<WAVYMusicTrack> AvailableTracks = new Queue<WAVYMusicTrack>();
 
-        private static Dictionary<WAVYSong, WAVYMusicTrack[]> _songTracks = new Dictionary<WAVYSong, WAVYMusicTrack[]>();
-        private static Dictionary<WAVYSong, Coroutine[]> _songCoroutines = new Dictionary<WAVYSong, Coroutine[]>();
-        private static Dictionary<WAVYSong, float[]> _songTracksVolume = new Dictionary<WAVYSong, float[]>();
-        private static Dictionary<WAVYSong, int[]> _enabledTracks = new Dictionary<WAVYSong, int[]>();
+        private readonly static HashSet<WAVYSong> _songsBeingStopped = new HashSet<WAVYSong>();
+        private readonly static Dictionary<WAVYSong, WAVYMusicTrack[]> _songTracks = new Dictionary<WAVYSong, WAVYMusicTrack[]>();
+        private readonly static Dictionary<WAVYSong, Coroutine[]> _songCoroutines = new Dictionary<WAVYSong, Coroutine[]>();
+        private readonly static Dictionary<WAVYSong, float[]> _songTracksVolume = new Dictionary<WAVYSong, float[]>();
+        private readonly static Dictionary<WAVYSong, int[]> _enabledTracks = new Dictionary<WAVYSong, int[]>();
 
         [RuntimeInitializeOnLoadMethod]
         private static void CreateMusicPlayer()
@@ -72,6 +74,9 @@ namespace WAVYMusic
 
             // Set this to the new singleton instance
             Instance = this;
+
+            // Tag this object as don't destroy on load so we can have music playing between scenes
+            DontDestroyOnLoad(gameObject);
         }
 
         /// <summary>
@@ -126,17 +131,23 @@ namespace WAVYMusic
 
         /// <summary>
         /// Plays the given song. <para/>
-        /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
+        /// NOTE: Only the first track on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
         public static void PlaySong(WAVYSong song, params int[] enabledTracks)
         {
-            if (_songTracks.ContainsKey(song))
+            // Interrupt the stopping of this song if it's being stopped currently
+            if (_songsBeingStopped.Contains(song))
             {
-#if UNITY_EDITOR
-                Debug.LogWarning($"Song \"{song.name}\" is already playing!");
-#endif
-                return;
+                InterruptSongStopping(song);
             }
+            
+//            if (_songTracks.ContainsKey(song))
+//            {
+//#if UNITY_EDITOR
+//                Debug.LogWarning($"Song \"{song.name}\" is already playing!");
+//#endif
+//                return;
+//            }
 
             Instance.PlaySongLocal(song, null, enabledTracks);
         }
@@ -151,46 +162,18 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Plays the given song at the scheduled time. <para/>
+        /// Plays the given <paramref name="song"/> at the scheduled time. <para/>
         /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
         public static void PlaySongScheduled(WAVYSong song, double scheduledTime, params int[] enabledTracks)
         {
             Instance.PlaySongLocal(song, scheduledTime, enabledTracks);
         }
-        #endregion
-
-        #region Stop Song
-        /// <summary>
-        /// Fades out the song with the given <paramref name="songName"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 for an instant cut.
-        /// </summary>
-        public static void StopSong(string songName, float fadeDuration)
-        {
-            StopSong(GetSong(songName), fadeDuration);
-        }
 
         /// <summary>
-        /// Fades out the <paramref name="song"/>  for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 for an instant cut.
+        /// Plays the given <paramref name="song"/> at the scheduled time. <para/>
+        /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
-        public static void StopSong(WAVYSong song, float fadeDuration)
-        {
-            if (!_songTracks.ContainsKey(song))
-            {
-#if UNITY_EDITOR
-                Debug.LogWarning($"No song called \"{song.name}\" is currently playing!");
-#endif
-                return;
-            }
-
-            WAVYMusicTrack[] tracks = _songTracks[song];
-
-            foreach (WAVYMusicTrack track in tracks)
-            {
-
-            }
-        }
-        #endregion
-
         private void PlaySongLocal(WAVYSong song, double? scheduledTime = null, params int[] enabledTracks)
         {
             if (enabledTracks.Length <= 0)
@@ -207,26 +190,40 @@ namespace WAVYMusic
                 }
             }
 
-            // Calculate the amount of tracks we are going to need to play this song
+            // Store the track count
             int trackCount = song.TrackCount;
 
-            // Create an array of the tracks which we will use to play our song
-            WAVYMusicTrack[] tracks = new WAVYMusicTrack[trackCount];
+            WAVYMusicTrack[] tracks;
 
-            // Populate the array
-            for (int i = 0; i < trackCount; i++)
+            // Check if there are already some tracks for this song
+            if (_songTracks.ContainsKey(song))
             {
-                // Check if the queue is empty or not
-                if (AvailableTracks.Count > 0)
+                tracks = _songTracks[song];
+            }
+            else
+            {
+                // If not, then we will create a new array of tracks
+                // Create an array of the tracks which we will use to play our song
+                tracks = new WAVYMusicTrack[trackCount];
+
+                // Populate the array
+                for (int i = 0; i < trackCount; i++)
                 {
-                    // Get the next available track from the queue
-                    tracks[i] = AvailableTracks.Dequeue();
+                    // Check if the queue is empty or not
+                    if (AvailableTracks.Count > 0)
+                    {
+                        // Get the next available track from the queue
+                        tracks[i] = AvailableTracks.Dequeue();
+                    }
+                    else
+                    {
+                        // Create a completey new track as there are no available tracks in the queue
+                        tracks[i] = CreateTrack();
+                    }
                 }
-                else
-                {
-                    // Create a completey new track as there are no available tracks in the queue
-                    tracks[i] = CreateTrack();
-                }
+
+                // Add tracks to dictionary
+                _songTracks[song] = tracks;
             }
 
             // Add coroutine array to the song coroutines dictionary
@@ -249,16 +246,10 @@ namespace WAVYMusic
             for (int i = 0; i < length; i++)
             {
                 WAVYMusicTrack track = tracks[i];
+
                 bool mainTrack = i == 0;
 
-                if (mainTrack)
-                {
-                    track.HandleLooping = true;
-                }
-                else
-                {
-                    track.HandleLooping = false;
-                }
+                track.HandleLooping = mainTrack;
 
                 track.Song = song;
 
@@ -276,20 +267,122 @@ namespace WAVYMusic
                     track.Play(clip);
                 }
             }
-
-            // Add tracks to dictionary
-            _songTracks[song] = tracks;
         }
+
+        #endregion
+
+        #region Stop Song
+        /// <summary>
+        /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
+        /// </summary>
+        public static void StopSong(string songName, float fadeDuration = 1)
+        {
+            StopSong(GetSong(songName), fadeDuration);
+        }
+
+        /// <summary>
+        /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
+        /// </summary>
+        public static void StopSong(WAVYSong song, float fadeDuration = 1)
+        {
+            Instance.StopSongLocal(song, fadeDuration);
+        }
+
+        /// <summary>
+        /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
+        /// </summary>
+        private void StopSongLocal(WAVYSong song, float fadeDuration = 1)
+        {
+            if (!_songTracks.ContainsKey(song))
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"No song called \"{song.name}\" is currently playing!");
+#endif
+                return;
+            }
+
+            InterruptSongStoppingLocal(song);
+
+            // Get all the tracks for the song
+            WAVYMusicTrack[] tracks = _songTracks[song];
+
+            Action onFinish = () =>
+            {
+                // Remove this song from everything to make it stop playing
+                _songsBeingStopped.Remove(song);
+
+                _songTracks.Remove(song);
+
+                foreach (WAVYMusicTrack track in tracks)
+                {
+                    track.Stop();
+                }
+            };
+
+            // Make all tracks fade to 0 for the specified duration
+            int length = tracks.Length;
+
+            for (int i = 0; i < length; i++)
+            {
+                FadeTrackLocal(song, i, fadeDuration, 0, i == 0 ? onFinish : null);
+            }
+
+            // Add this song as a song that's being currently stopped
+            // NOTE: We do this AFTER making all of the tracks fade out
+            // This is because FadeTrackLocal is coded to NOT WORK when a song is inside of the _songsBeingStopped HashSet
+            _songsBeingStopped.Add(song);
+        }
+
+        /// <summary>
+        /// Stop a song from being stopped if it's currently being stopped with <see cref="StopSong(string, float)"/>.
+        /// </summary>
+        public static void InterruptSongStopping(string songName)
+        {
+            InterruptSongStopping(GetSong(songName));
+        }
+
+        /// <summary>
+        /// Stop a song from being stopped if it's currently being stopped with <see cref="StopSong(WAVYSong, float)"/>.
+        /// </summary>
+        public static void InterruptSongStopping(WAVYSong song)
+        {
+            Instance.InterruptSongStoppingLocal(song);
+        }
+
+        /// <summary>
+        /// Stop a song from being stopped if it's currently being stopped with <see cref="StopSong(WAVYSong, float)"/>.
+        /// </summary>
+        public void InterruptSongStoppingLocal(WAVYSong song)
+        {
+            if (_songsBeingStopped.Contains(song))
+            {
+                _songsBeingStopped.Remove(song);
+            }
+
+            if (!_songCoroutines.ContainsKey(song))
+            {
+                return;
+            }
+
+            for (int i = 0; i < song.TrackCount; i++)
+            {
+                CancelFadeCoroutine(song, i, false);
+            }
+        }
+        #endregion
 
         #region Set Song Tracks
         /// <summary>
-        /// Fades in all the tracks in the <paramref name="enabledTracks"/> array.
+        /// Fades in all the tracks in the <paramref name="enabledTracks"/> array and fades out all tracks outside not in the array.
         /// </summary>
         public static void SetSongTracks(string songName, float fadeDuration, params int[] enabledTracks)
         {
             SetSongTracks(GetSong(songName), fadeDuration, enabledTracks);
         }
 
+        /// <summary>
+        /// Fades in all the tracks in the <paramref name="enabledTracks"/> array and fades out all tracks outside not in the array.
+        /// </summary>
         public static void SetSongTracks(WAVYSong song, float fadeDuration, params int[] enabledTracks)
         {
             _enabledTracks[song] = enabledTracks;
@@ -331,16 +424,25 @@ namespace WAVYMusic
         #endregion
 
         #region Set Track Volume
+        /// <summary>
+        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         public static void SetTrackVolume(string songName, float volume, params int[] tracks)
         {
             SetTrackVolume(GetSong(songName), volume, tracks);
         }
 
+        /// <summary>
+        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         public static void SetTrackVolume(WAVYSong song, float volume, params int[] tracks)
         {
             Instance.SetTrackVolumeLocal(song, volume, tracks);
         }
 
+        /// <summary>
+        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         private void SetTrackVolumeLocal(WAVYSong song, float volume, params int[] tracks)
         {
             if (!_songTracksVolume.ContainsKey(song))
@@ -348,29 +450,31 @@ namespace WAVYMusic
                 return;
             }
 
-            bool cancelCoroutines = !_songCoroutines.ContainsKey(song);
-
             foreach (int track in tracks)
             {
-                if (!cancelCoroutines)
-                {
-                    CancelFadeCoroutine(song, track, false);
-                }
-
-                _songTracksVolume[song][track] = volume * VolumeScale;
+                SetTrackVolumeLocal(song, volume, track);
             }
         }
 
+        /// <summary>
+        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         public static void SetTrackVolume(string songName, float volume, int track)
         {
             SetTrackVolume(GetSong(songName), volume, track);
         }
 
+        /// <summary>
+        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         public static void SetTrackVolume(WAVYSong song, float volume, int track)
         {
             Instance.SetTrackVolumeLocal(song, volume, track);
         }
 
+        /// <summary>
+        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// </summary>
         private void SetTrackVolumeLocal(WAVYSong song, float volume, int track)
         {
             if (!_songTracksVolume.ContainsKey(song))
@@ -385,28 +489,57 @@ namespace WAVYMusic
         #endregion
 
         #region Fade Track
-
-
-        public static void FadeTrack(string songName, int track, float duration, float targetVolume)
+        /// <summary>
+        /// Fades from the current volume to the <paramref name="targetVolume"/> over the time of <paramref name="duration"/> seconds. <para/>
+        /// Performs <paramref name="onFinish"/> when the track is finished fading out.
+        /// </summary>
+        public static void FadeTrack(string songName, int track, float duration, float targetVolume, Action onFinish = null)
         {
-            FadeTrack(GetSong(songName), track, duration, targetVolume);
+            FadeTrack(GetSong(songName), track, duration, targetVolume, onFinish);
         }
 
-        public static void FadeTrack(WAVYSong song, int track, float duration, float targetVolume)
+        /// <summary>
+        /// Fades from the current volume to the <paramref name="targetVolume"/> over the time of <paramref name="duration"/> seconds. <para/>
+        /// Performs <paramref name="onFinish"/> when the track is finished fading out.
+        /// </summary>
+        public static void FadeTrack(WAVYSong song, int track, float duration, float targetVolume, Action onFinish = null)
         {
-            Instance.FadeTrackLocal(song, track, duration, targetVolume);
+            Instance.FadeTrackLocal(song, track, duration, targetVolume, onFinish);
         }
 
-        private void FadeTrackLocal(WAVYSong song, int track, float duration, float targetVolume)
+        /// <summary>
+        /// Fades from the current volume to the <paramref name="targetVolume"/> over the time of <paramref name="duration"/> seconds. <para/>
+        /// Performs <paramref name="onFinish"/> when the track is finished fading out.
+        /// </summary>
+        private void FadeTrackLocal(WAVYSong song, int track, float duration, float targetVolume, Action onFinish = null)
         {
             if (!_songCoroutines.ContainsKey(song))
             {
                 return;
             }
 
+            if (_songsBeingStopped.Contains(song))
+            {
+                return;
+            }
+
             CancelFadeCoroutine(song, track, false);
 
-            _songCoroutines[song][track] = StartCoroutine(StartFade(song, track, duration, targetVolume));
+            // Account for instant fade out (as in cutting it off instantly)
+            if (duration <= 0)
+            {
+                _songCoroutines[song][track] = null;
+
+                _songTracksVolume[song][track] = 0;
+
+                UpdateTrackVolume(song, track);
+
+                onFinish?.Invoke();
+            }
+            else
+            {
+                _songCoroutines[song][track] = StartCoroutine(StartFade(song, track, duration, targetVolume, onFinish));
+            }
         }
 
         private void UpdateTrackVolume(WAVYSong song, int track)
@@ -437,9 +570,10 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Fades from the current volume to the <paramref name="targetVolume"/> over the time of <paramref name="duration"/> seconds.
+        /// Fades from the current volume to the <paramref name="targetVolume"/> over the time of <paramref name="duration"/> seconds. <para/>
+        /// Performs <paramref name="onFinish"/> when the track is finished fading out.
         /// </summary>
-        private IEnumerator StartFade(WAVYSong song, int track, float duration, float targetVolume)
+        private IEnumerator StartFade(WAVYSong song, int track, float duration, float targetVolume, Action onFinish = null)
         {
             void Update() => UpdateTrackVolume(song, track);
             void SetVolume(float vol) => _songTracksVolume[song][track] = vol * VolumeScale;
@@ -462,6 +596,8 @@ namespace WAVYMusic
 
             SetVolume(targetVolume);
             Update();
+
+            onFinish?.Invoke();
 
             yield break;
         }

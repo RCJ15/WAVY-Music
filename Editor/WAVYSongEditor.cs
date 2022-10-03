@@ -40,6 +40,8 @@ namespace WAVYMusicEditor
 
                 EditorGUILayout.PropertyField(displayNameProp);
 
+                serializedObject.ApplyModifiedProperties();
+
                 EditorGUILayout.PropertyField(songProp);
 
                 if (serializedObject.ApplyModifiedProperties())
@@ -51,6 +53,8 @@ namespace WAVYMusicEditor
                     {
                         displayNameProp.stringValue = clip.name;
                     }
+
+                    serializedObject.FindProperty("LoopPoint").doubleValue = clip.length;
                 }
 
                 EditorGUILayout.Space();
