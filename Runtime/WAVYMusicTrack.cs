@@ -11,7 +11,7 @@ namespace WAVYMusic
     {
         public AudioSource Source;
         public WAVYSong Song;
-        public bool HandleLooping;
+        public bool IsMasterTrack;
 
         private bool _playing;
         private bool _haveScheduledLoop;
@@ -21,6 +21,11 @@ namespace WAVYMusic
         /// The current volume of this <see cref="WAVYMusicTrack"/>.
         /// </summary>
         public float Volume { get => Source.volume; set => Source.volume = value; }
+
+        /// <summary>
+        /// Playback position in seconds.
+        /// </summary>
+        public float Time { get => Source.time; set => Source.time = value; }
 
         private void Start()
         {
@@ -45,8 +50,14 @@ namespace WAVYMusic
                 _playing = true;
             }
 
-            // Return if the song is not playing, if we have already scheduled a loop or if this track shouldn't handle looping
-            if (!_playing || _haveScheduledLoop || !HandleLooping)
+            // Return if this track isn't the master track
+            if (!IsMasterTrack)
+            {
+                return;
+            }
+
+            // Return if the song is not playing or if we have already scheduled a loop
+            if (!_playing || _haveScheduledLoop)
             {
                 return;
             }
@@ -94,11 +105,11 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Setups the loop time if this track handles looping and the song should have looping.
+        /// Setups the loop time if this track is the master track and if the song should have looping.
         /// </summary>
         private void SetupLoop(double offset = 0)
         {
-            if (HandleLooping && Song.HaveLoop)
+            if (IsMasterTrack && Song.HaveLoop)
             {
                 _loopTime = AudioSettings.dspTime + Song.LoopPoint + offset;
                 _haveScheduledLoop = false;

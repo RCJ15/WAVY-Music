@@ -53,6 +53,8 @@ namespace WAVYMusic
         private readonly static Dictionary<WAVYSong, float[]> _songTracksVolume = new Dictionary<WAVYSong, float[]>();
         private readonly static Dictionary<WAVYSong, int[]> _enabledTracks = new Dictionary<WAVYSong, int[]>();
 
+        private readonly static Dictionary<WAVYSong, float> _pendingSongTime = new Dictionary<WAVYSong, float>();
+
         [RuntimeInitializeOnLoadMethod]
         private static void CreateMusicPlayer()
         {
@@ -140,21 +142,13 @@ namespace WAVYMusic
             {
                 InterruptSongStopping(song);
             }
-            
-//            if (_songTracks.ContainsKey(song))
-//            {
-//#if UNITY_EDITOR
-//                Debug.LogWarning($"Song \"{song.name}\" is already playing!");
-//#endif
-//                return;
-//            }
 
             Instance.PlaySongLocal(song, null, enabledTracks);
         }
 
         /// <summary>
         /// Plays the given song at the scheduled time. <para/>
-        /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
+        /// NOTE: Only the first track on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
         public static void PlaySongScheduled(string songName, double scheduledTime, params int[] enabledTracks)
         {
@@ -163,7 +157,7 @@ namespace WAVYMusic
 
         /// <summary>
         /// Plays the given <paramref name="song"/> at the scheduled time. <para/>
-        /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
+        /// NOTE: Only the first track on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
         public static void PlaySongScheduled(WAVYSong song, double scheduledTime, params int[] enabledTracks)
         {
@@ -172,7 +166,7 @@ namespace WAVYMusic
 
         /// <summary>
         /// Plays the given <paramref name="song"/> at the scheduled time. <para/>
-        /// NOTE: No tracks on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
+        /// NOTE: Only the first track on the song will be played. Use the <paramref name="enabledTracks"/> to enable which tracks should play.
         /// </summary>
         private void PlaySongLocal(WAVYSong song, double? scheduledTime = null, params int[] enabledTracks)
         {
@@ -195,8 +189,8 @@ namespace WAVYMusic
 
             WAVYMusicTrack[] tracks;
 
-            // Check if there are already some tracks for this song
-            if (_songTracks.ContainsKey(song))
+            // Check if the song is already playing
+            if (IsSongPlaying(song))
             {
                 tracks = _songTracks[song];
             }
@@ -240,6 +234,13 @@ namespace WAVYMusic
                 _songTracksVolume[song][track] = 1;
             }
 
+            // Try get time
+            if (_pendingSongTime.TryGetValue(song, out float time))
+            {
+                // If succeed, then remove the song from the dictionary
+                _pendingSongTime.Remove(song);
+            }
+
             // Loop through all of our chosen tracks
             int length = trackCount;
 
@@ -249,11 +250,14 @@ namespace WAVYMusic
 
                 bool mainTrack = i == 0;
 
-                track.HandleLooping = mainTrack;
+                track.IsMasterTrack = mainTrack;
 
                 track.Song = song;
 
                 AudioClip clip = mainTrack ? song.SongClip : song.Tracks[i - 1];
+
+                // Set time
+                track.Time = time;
 
                 // Set volume
                 track.Volume = _songTracksVolume[song][i];
@@ -275,7 +279,7 @@ namespace WAVYMusic
         /// <summary>
         /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
         /// </summary>
-        public static void StopSong(string songName, float fadeDuration = 1)
+        public static void StopSong(string songName, float fadeDuration = 0)
         {
             StopSong(GetSong(songName), fadeDuration);
         }
@@ -283,7 +287,7 @@ namespace WAVYMusic
         /// <summary>
         /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
         /// </summary>
-        public static void StopSong(WAVYSong song, float fadeDuration = 1)
+        public static void StopSong(WAVYSong song, float fadeDuration = 0)
         {
             Instance.StopSongLocal(song, fadeDuration);
         }
@@ -291,9 +295,10 @@ namespace WAVYMusic
         /// <summary>
         /// Fades out the <paramref name="song"/> for <paramref name="fadeDuration"/> seconds. Set <paramref name="fadeDuration"/> to 0 or below for an instant cut.
         /// </summary>
-        private void StopSongLocal(WAVYSong song, float fadeDuration = 1)
+        private void StopSongLocal(WAVYSong song, float fadeDuration = 0)
         {
-            if (!_songTracks.ContainsKey(song))
+            // Return and say a warning if the song is already playing
+            if (!IsSongPlaying(song))
             {
 #if UNITY_EDITOR
                 Debug.LogWarning($"No song called \"{song.name}\" is currently playing!");
@@ -425,7 +430,7 @@ namespace WAVYMusic
 
         #region Set Track Volume
         /// <summary>
-        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         public static void SetTrackVolume(string songName, float volume, params int[] tracks)
         {
@@ -433,7 +438,7 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         public static void SetTrackVolume(WAVYSong song, float volume, params int[] tracks)
         {
@@ -441,7 +446,7 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of all the given <paramref name="tracks"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         private void SetTrackVolumeLocal(WAVYSong song, float volume, params int[] tracks)
         {
@@ -457,7 +462,7 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         public static void SetTrackVolume(string songName, float volume, int track)
         {
@@ -465,7 +470,7 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         public static void SetTrackVolume(WAVYSong song, float volume, int track)
         {
@@ -473,7 +478,7 @@ namespace WAVYMusic
         }
 
         /// <summary>
-        /// Sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
+        /// Instantly sets the volume of the track with the index <paramref name="track"/> to <paramref name="volume"/> multiplied by <see cref="VolumeScale"/>.
         /// </summary>
         private void SetTrackVolumeLocal(WAVYSong song, float volume, int track)
         {
@@ -544,8 +549,8 @@ namespace WAVYMusic
 
         private void UpdateTrackVolume(WAVYSong song, int track)
         {
-            // Return if there are no tracks currently
-            if (!_songTracks.ContainsKey(song))
+            // Return if the song isn't playing currently
+            if (!IsSongPlaying(song))
             {
                 return;
             }
@@ -600,6 +605,118 @@ namespace WAVYMusic
             onFinish?.Invoke();
 
             yield break;
+        }
+        #endregion
+
+        #region Song Data
+        //-- Is Song Playing
+        /// <summary>
+        /// Returns whether the song is playing or not.
+        /// </summary>
+        public static bool IsSongPlaying(string songName)
+        {
+            return IsSongPlaying(GetSong(songName));
+        }
+
+        /// <summary>
+        /// Returns whether the <paramref name="song"/> is playing or not.
+        /// </summary>
+        public static bool IsSongPlaying(WAVYSong song)
+        {
+            return _songTracks.ContainsKey(song);
+        }
+
+        //-- Get Song Time
+        /// <summary>
+        /// Returns the playback position of the song master track in seconds. <para/>
+        /// NOTE: Will return the Pending Song Time instead if the song ISN'T PLAYING.
+        /// </summary>
+        public static float GetSongTime(string songName)
+        {
+            return GetSongTime(songName);
+        }
+
+        /// <summary>
+        /// Returns the playback position of the <paramref name="song"/> master track in seconds. <para/>
+        /// NOTE: Will return the Pending Song Time instead if the <paramref name="song"/> ISN'T PLAYING.
+        /// </summary>
+        public static float GetSongTime(WAVYSong song)
+        {
+            // Return 0 by default if the song isn't playing
+            if (!IsSongPlaying(song))
+            {
+                _pendingSongTime.TryGetValue(song, out float time);
+
+                return time;
+            }
+
+            // 0 is always the Master Track.
+            return _songTracks[song][0].Time;
+        }
+
+        //-- Set Song Time
+        /// <summary>
+        /// Sets the song time for the song to <paramref name="time"/>. Values below 0 will be ignored. <para/>
+        /// NOTE: Will set the Pending Song Time if the song ISN'T PLAYING. The Pending Song Time will be used when the song is going to be played. <para/>
+        /// EXAMPLE: If you set the song time to 2 and the song ISN'T PLAYING, then when you call <see cref="PlaySong(string, int[])"/> the song time will be instantly set to 2. Use <see cref="GetSongTime(string)"/> to get the Pending Song Time if the song ISN'T PLAYING.
+        /// </summary>
+        public static void SetSongTime(string songName, float time)
+        {
+            SetSongTime(GetSong(songName), time);
+        }
+
+        /// <summary>
+        /// Sets the song time for the <paramref name="song"/> to <paramref name="time"/>. Values below 0 will be ignored. <para/>
+        /// NOTE: Will set the Pending Song Time if the <paramref name="song"/> ISN'T PLAYING. The Pending Song Time will be used when the <paramref name="song"/> is going to be played. <para/>
+        /// EXAMPLE: If you set the song time to 2 and the <paramref name="song"/> ISN'T PLAYING, then when you call <see cref="PlaySong(string, int[])"/> the song time will be instantly set to 2. Use <see cref="GetSongTime(string)"/> to get the Pending Song Time if the <paramref name="song"/> ISN'T PLAYING.
+        /// </summary>
+        public static void SetSongTime(WAVYSong song, float time)
+        {
+            // Ignore values below 0
+            if (time < 0)
+            {
+                return;
+            }
+
+            // Return and set the pending song time if the song isn't playing currently
+            if (!IsSongPlaying(song))
+            {
+                _pendingSongTime[song] = time;
+                return;
+            }
+
+            // Set the time for all music tracks
+            foreach (WAVYMusicTrack track in _songTracks[song])
+            {
+                track.Time = time;
+            }
+        }
+
+        /// <summary>
+        /// Will remove the Pending Song Time on the song if there is a Pending Song Time set for it. This is honestly kind of useless... <para/>
+        /// TIP: Use this before calling <see cref="PlaySong(string, int[])"/> to ensure the song always begins at the start without using <see cref="SetSongTime(string, float)"/>.
+        /// </summary>
+        /// <returns>True if the Pending Song Time was successfully removed, false if there was no Pending Song Time set in the first place.</returns>
+        public static bool RemovePendingSongTime(string songName)
+        {
+            return RemovePendingSongTime(GetSong(songName));
+        }
+
+        /// <summary>
+        /// Will remove the Pending Song Time on the <paramref name="song"/> if there is a Pending Song Time set for it. This is honestly kind of useless... <para/>
+        /// TIP: Use this before calling <see cref="PlaySong(WAVYSong, int[])"/> to ensure the song always begins at the start without using <see cref="SetSongTime(WAVYSong, float)"/>.
+        /// </summary>
+        /// <returns>True if the Pending Song Time was successfully removed, false if there was no Pending Song Time set in the first place.</returns>
+        public static bool RemovePendingSongTime(WAVYSong song)
+        {
+            if (!_pendingSongTime.ContainsKey(song))
+            {
+                return false;
+            }
+
+            _pendingSongTime.Remove(song);
+
+            return true;
         }
         #endregion
     }

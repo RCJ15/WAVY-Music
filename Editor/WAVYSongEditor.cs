@@ -421,15 +421,24 @@ namespace WAVYMusicEditor
             */
 
             // Set loop point
-            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Point"), false, _wavySong.HaveLoop ? () =>
+            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Point"), false, serializedObject.FindProperty("HaveLoop").boolValue ? () =>
             {
-                _wavySong.LoopPoint = time;
-            } : null);
+                // Get the LoopPoint property
+                serializedObject.FindProperty("LoopPoint").floatValue = time;
+
+                // Apply Modified Properties to allow undo 
+                serializedObject.ApplyModifiedProperties();
+            }
+            : null);
 
             // Set loop start point
-            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Start Point"), false, _wavySong.HaveLoopStartPoint ? () =>
+            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Start Point"), false, serializedObject.FindProperty("HaveLoopStartPoint").boolValue ? () =>
             {
-                _wavySong.LoopStartPoint = time;
+                // Get the LoopStartPoint property
+                serializedObject.FindProperty("LoopStartPoint").floatValue = time;
+
+                // Apply Modified Properties to allow undo 
+                serializedObject.ApplyModifiedProperties();
             }
             : null);
 
@@ -437,10 +446,24 @@ namespace WAVYMusicEditor
             menu.AddSeparator("");
 
             // Add event
-            menu.AddItem(new GUIContent($"Add \"{cue.Name}\" as a new Event Point"), false, _wavySong.HaveSongEvents  ? () =>
+            menu.AddItem(new GUIContent($"Add \"{cue.Name}\" as a new Event Point"), false, serializedObject.FindProperty("HaveSongEvents").boolValue  ? () =>
             {
-                // Add a new event
-                _wavySong.SongEvents.Add(new WAVYSong.Event(cue.Name, time));
+                // Get the SongEvents property
+                SerializedProperty prop = serializedObject.FindProperty("SongEvents");
+
+                // Add a new event on the property
+                int index = prop.arraySize;
+                prop.InsertArrayElementAtIndex(index);
+
+                // Get the newly added SongEvent on the SongEvents array
+                SerializedProperty newEventProp = prop.GetArrayElementAtIndex(index);
+
+                // Set properties on the SongEvent
+                newEventProp.FindPropertyRelative("Name").stringValue = cue.Name;
+                newEventProp.FindPropertyRelative("Time").floatValue = time;
+
+                // Apply Modified Properties to allow undo 
+                serializedObject.ApplyModifiedProperties();
             }
             : null);
 
