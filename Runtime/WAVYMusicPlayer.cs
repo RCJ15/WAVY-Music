@@ -692,6 +692,7 @@ namespace WAVYMusic
             }
         }
 
+        //-- Remove Pending Song Time
         /// <summary>
         /// Will remove the Pending Song Time on the song if there is a Pending Song Time set for it. This is honestly kind of useless... <para/>
         /// TIP: Use this before calling <see cref="PlaySong(string, int[])"/> to ensure the song always begins at the start without using <see cref="SetSongTime(string, float)"/>.

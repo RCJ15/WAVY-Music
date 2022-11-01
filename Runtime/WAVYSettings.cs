@@ -67,13 +67,22 @@ namespace WAVYMusic
 #endif
 
         #region Track Settings
+        [Tooltip("The default mixer group that every WAVYSong will have. This can be overriden if you set a MixerGroup in the WAVYSong itself.")]
         public AudioMixerGroup MixerGroup;
+
+        [Tooltip(
+@"Determines how much time beforehand a song should schedule a loop.
+For example: if you have a WAVYSong with a loop point set to 100 seconds and the Loop Schedule Offset is at 3, then the song will schedule it's loop 3 seconds before 100 seconds have passed.
+The song will still loop at 100 seconds, it'll just schedule the loop a bit beforehand to ensure a PERFECT LOOP.
+Leaving this option at it's default value will most likely suffice.")]
+        public float LoopScheduleOffset = 1;
         #endregion
 
 #if UNITY_EDITOR
         #region Editor Settings
         public bool EditorExpanded;
 
+        [Tooltip("Toggle if a song should be automatically named to match it's audio file when the file is swapped or changed.")]
         public bool AutoNameSong = true;
 
         /*
@@ -81,9 +90,13 @@ namespace WAVYMusic
         public Color BPMLinesColor = Color.green;
         */
 
+        [Tooltip("If the WAV markers (cues) should be displayed or not. WAVYMusic loses most of it's functionality if this is turned off so please don't.")]
         public bool ShowMarkers = true;
+
+        [Tooltip("The color of the WAV markers (cues).")]
         public Color MarkersColor = Color.yellow;
 
+        [Tooltip("Some sections of the WAVYSong inspector has InfoBoxes. This will simply disable those from appearing and cluttering your view if you know what you're doing.")]
         public bool HideInfoBoxes = false;
         #endregion
 #endif

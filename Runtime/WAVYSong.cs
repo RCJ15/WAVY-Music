@@ -33,6 +33,7 @@ namespace WAVYMusic
 
         public bool HaveSongEvents = false;
         public List<Event> SongEvents;
+        public Action<string> OnEventTrigger;
 
         /// <summary>
         /// How many <see cref="WAVYMusicTrack"/> this <see cref="WAVYSong"/> has.

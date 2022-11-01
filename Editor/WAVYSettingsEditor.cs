@@ -29,6 +29,7 @@ namespace WAVYMusicEditor
         public static bool DrawInspector(SerializedObject obj)
         {
             EditorGUILayout.PropertyField(obj.FindProperty("MixerGroup"));
+            EditorGUILayout.PropertyField(obj.FindProperty("LoopScheduleOffset"));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Editor Settings", EditorStyles.boldLabel);
