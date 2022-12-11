@@ -12,6 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f288b41750d4dde498cb420439ead0ad, type: 3}
   m_Name: WAVY Song List
   m_EditorClassIdentifier: 
-  Songs:
-  - {fileID: 11400000, guid: dc1a51fd84189ab45b63bb9a409acddd, type: 2}
-  - {fileID: 11400000, guid: 24a3f867466be5f488cc69dc65178dc1, type: 2}
+  Songs: []
