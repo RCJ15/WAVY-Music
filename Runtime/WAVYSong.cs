@@ -56,9 +56,9 @@ namespace WAVYMusic
         public class Event
         {
             public string Name;
-            public float Time;
+            public double Time;
 
-            public Event(string name, float time)
+            public Event(string name, double time)
             {
                 Name = name;
                 Time = time;

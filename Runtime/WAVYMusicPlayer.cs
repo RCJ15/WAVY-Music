@@ -143,6 +143,12 @@ namespace WAVYMusic
                 InterruptSongStopping(song);
             }
 
+            // Don't allow multiple songs to play at once
+            if (IsSongPlaying(song))
+            {
+                StopSong(song);
+            }
+
             Instance.PlaySongLocal(song, null, enabledTracks);
         }
 
@@ -189,36 +195,27 @@ namespace WAVYMusic
 
             WAVYMusicTrack[] tracks;
 
-            // Check if the song is already playing
-            if (IsSongPlaying(song))
-            {
-                tracks = _songTracks[song];
-            }
-            else
-            {
-                // If not, then we will create a new array of tracks
-                // Create an array of the tracks which we will use to play our song
-                tracks = new WAVYMusicTrack[trackCount];
+            // Create an array of the tracks which we will use to play our song
+            tracks = new WAVYMusicTrack[trackCount];
 
-                // Populate the array
-                for (int i = 0; i < trackCount; i++)
+            // Populate the array
+            for (int i = 0; i < trackCount; i++)
+            {
+                // Check if the queue is empty or not
+                if (AvailableTracks.Count > 0)
                 {
-                    // Check if the queue is empty or not
-                    if (AvailableTracks.Count > 0)
-                    {
-                        // Get the next available track from the queue
-                        tracks[i] = AvailableTracks.Dequeue();
-                    }
-                    else
-                    {
-                        // Create a completey new track as there are no available tracks in the queue
-                        tracks[i] = CreateTrack();
-                    }
+                    // Get the next available track from the queue
+                    tracks[i] = AvailableTracks.Dequeue();
                 }
-
-                // Add tracks to dictionary
-                _songTracks[song] = tracks;
+                else
+                {
+                    // Create a completey new track as there are no available tracks in the queue
+                    tracks[i] = CreateTrack();
+                }
             }
+
+            // Add tracks to dictionary
+            _songTracks[song] = tracks;
 
             // Add coroutine array to the song coroutines dictionary
             if (!_songCoroutines.ContainsKey(song))
@@ -241,10 +238,8 @@ namespace WAVYMusic
                 _pendingSongTime.Remove(song);
             }
 
-            // Loop through all of our chosen tracks
-            int length = trackCount;
-
-            for (int i = 0; i < length; i++)
+            // Loop through all of our tracks
+            for (int i = 0; i < trackCount; i++)
             {
                 WAVYMusicTrack track = tracks[i];
 
@@ -395,7 +390,9 @@ namespace WAVYMusic
             // Create HashSet which we will use to check which tracks to disable
             HashSet<int> trackCheck = new HashSet<int>();
 
-            // Loop through all the enabled trakcs
+            // Loop through all the enabled tracks
+            int trackCount = song.TrackCount;
+
             foreach (int track in enabledTracks)
             {
                 // Continue to the next track if we have aready enabled this track
@@ -404,11 +401,16 @@ namespace WAVYMusic
                     continue;
                 }
 
-                // Fade in the track
-                FadeTrack(song, track, fadeDuration, 1);
-
                 // Add the track to the HashSet
                 trackCheck.Add(track);
+
+                if (track >= trackCount)
+                {
+                    continue;
+                }
+
+                // Fade in the track
+                FadeTrack(song, track, fadeDuration, 1);
             }
 
             // Loop through all tracks

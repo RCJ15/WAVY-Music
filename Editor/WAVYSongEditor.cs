@@ -290,11 +290,17 @@ namespace WAVYMusicEditor
 
             tex.filterMode = FilterMode.Point;
 
+            // Draw the texture and cutoff the edges
+            GUI.BeginClip(rect);
+
+            rect.x = 0;
+            rect.y = 0;
+
             rect.x -= 7;
             rect.width += 14;
 
-            // Draw the texture
             EditorGUI.DrawTextureTransparent(rect, tex);
+            GUI.EndClip();
         }
 
         private const float MARKER_TEXT_OFFSET = 3;
@@ -460,7 +466,7 @@ namespace WAVYMusicEditor
 
                 // Set properties on the SongEvent
                 newEventProp.FindPropertyRelative("Name").stringValue = cue.Name;
-                newEventProp.FindPropertyRelative("Time").floatValue = time;
+                newEventProp.FindPropertyRelative("Time").doubleValue = time;
 
                 // Apply Modified Properties to allow undo 
                 serializedObject.ApplyModifiedProperties();

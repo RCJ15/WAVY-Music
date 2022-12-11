@@ -33,7 +33,19 @@ namespace WAVYMusic
         /// <summary>
         /// Playback position in seconds.
         /// </summary>
-        public float Time { get => Source.time; set => Source.time = value; }
+        public float Time
+        {
+            get => Source.time;
+            set
+            {
+                Source.Stop();
+                Source.time = value;
+                Source.Play();
+
+                // Re-setup the loop
+                SetupLoop();
+            }
+        }
 
         private void Start()
         {
@@ -186,7 +198,7 @@ namespace WAVYMusic
                 return;
             }
 
-            _loopTime = AudioSettings.dspTime + Song.LoopPoint + offset;
+            _loopTime = AudioSettings.dspTime + Song.LoopPoint + offset - Time;
             _haveScheduledLoop = false;
         }
 
