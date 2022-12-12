@@ -66,7 +66,8 @@ namespace WAVYMusic
         }
 #endif
 
-        [SerializeReference] public List<WAVYSong> Songs = new List<WAVYSong>();
+        [SerializeReference] private List<WAVYSong> songs = new List<WAVYSong>();
+        public List<WAVYSong> Songs => songs;
 
         private static Dictionary<string, WAVYSong> _cachedSongDictionary = null;
         public static Dictionary<string, WAVYSong> SongDictionary

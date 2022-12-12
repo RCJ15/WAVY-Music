@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 877b1d0e087968145ad434745d335fae, type: 3}
   m_Name: WAVY Settings
   m_EditorClassIdentifier: 
-  MixerGroup: {fileID: 0}
-  LoopScheduleOffset: 1
-  EditorExpanded: 1
-  AutoNameSong: 1
-  ShowMarkers: 1
-  MarkersColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  HideInfoBoxes: 0
+  mixerGroup: {fileID: 0}
+  loopScheduleOffset: 1
+  editorExpanded: 1
+  autoNameSong: 1
+  showMarkers: 1
+  markersColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  hideInfoBoxes: 0

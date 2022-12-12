@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,11 +33,11 @@ namespace WAVYMusicEditor
 
             //_wavySong.BPM = EditorGUILayout.FloatField("BPM", _wavySong.BPM);
 
-            SerializedProperty songProp = serializedObject.FindProperty("SongClip");
+            SerializedProperty songProp = serializedObject.FindProperty("songClip");
 
             songProp.isExpanded = Foldout(songProp.isExpanded, "Song Data", () =>
             {
-                SerializedProperty displayNameProp = serializedObject.FindProperty("DisplayName");
+                SerializedProperty displayNameProp = serializedObject.FindProperty("displayName");
 
                 EditorGUILayout.PropertyField(displayNameProp);
 
@@ -54,12 +55,12 @@ namespace WAVYMusicEditor
                         displayNameProp.stringValue = clip.name;
                     }
 
-                    serializedObject.FindProperty("LoopPoint").doubleValue = clip.length;
+                    serializedObject.FindProperty("loopPoint").doubleValue = clip == null ? 0 : clip.length;
                 }
 
                 EditorGUILayout.Space();
 
-                DrawOptionalProperty("HaveTracks", "Tracks", 32);
+                DrawOptionalProperty("haveTracks", "tracks", 32);
 
                 EditorGUILayout.Space();
             });
@@ -71,7 +72,7 @@ namespace WAVYMusicEditor
             #region Song Markers
 
             // First get the rect for both the audio clip and markers
-            SerializedProperty loopPointProp = serializedObject.FindProperty("LoopPoint");
+            SerializedProperty loopPointProp = serializedObject.FindProperty("loopPoint");
 
             loopPointProp.isExpanded = Foldout(loopPointProp.isExpanded, "Song Markers", () =>
             {
@@ -95,13 +96,13 @@ namespace WAVYMusicEditor
                 // Draw the loop fields
                 EditorGUILayout.Space(10);
 
-                DrawOptionalProperty("HaveLoop", "LoopPoint");
-                DrawOptionalProperty("HaveLoopStartPoint", "LoopStartPoint");
+                DrawOptionalProperty("haveLoop", "loopPoint");
+                DrawOptionalProperty("haveLoopStartPoint", "loopStartPoint");
 
                 // Draw the song events
                 EditorGUILayout.Space();
 
-                DrawOptionalProperty("HaveSongEvents", "SongEvents", 32);
+                DrawOptionalProperty("haveSongEvents", "songEvents", 32);
 
                 EditorGUILayout.Space();
             });
@@ -112,7 +113,7 @@ namespace WAVYMusicEditor
 
             #region Song List
             // Add the toggle to add or remove this song from the list
-            SerializedProperty inListProp = serializedObject.FindProperty("InSongList");
+            SerializedProperty inListProp = serializedObject.FindProperty("inSongList");
 
             inListProp.isExpanded = Foldout(inListProp.isExpanded, "Song List", () =>
             {
@@ -156,7 +157,8 @@ namespace WAVYMusicEditor
             #endregion
 
             #region WAVY Music Settings
-            _settings.EditorExpanded = Foldout(_settings.EditorExpanded, "WAVY Music Settings", () =>
+            SerializedProperty expandedProp = _settings.SerializedObject.FindProperty("editorExpanded");
+            expandedProp.boolValue = Foldout(expandedProp.boolValue, "WAVY Music Settings", () =>
             {
                 WAVYSettingsEditor.DrawInspector(_settings.SerializedObject);
 
@@ -168,6 +170,7 @@ namespace WAVYMusicEditor
                 }
             });
 
+            _settings.SerializedObject.ApplyModifiedPropertiesWithoutUndo();
             #endregion
 
             serializedObject.ApplyModifiedProperties();
@@ -229,11 +232,15 @@ namespace WAVYMusicEditor
             EditorGUI.EndDisabledGroup();
         }
 
+        // Using reflection because the protection on my own code is too good
+        private static FieldInfo _metadataField = typeof(WAVYSong).GetField("metadata", BindingFlags.NonPublic | BindingFlags.Instance);
         private void GenerateMetadata(AudioClip clip, bool displayMessages = true)
         {
             if (clip == null)
             {
-                _wavySong.Metadata = null;
+                _metadataField.SetValue(_wavySong, null);
+                //prop.managedReferenceValue = default(WavMetadata);
+                //_wavySong.Metadata = null;
 
                 if (displayMessages)
                 {
@@ -248,12 +255,14 @@ namespace WAVYMusicEditor
             // Get the proper full path to the clip
             string path = Path.Combine(Directory.GetCurrentDirectory(), AssetDatabase.GetAssetPath(clip)).Replace("/", "\\");
 
-            watch.Stop();
-
             try
             {
                 // Set the metadata
-                _wavySong.Metadata = WavReader.GetMetadata(path);
+                _metadataField.SetValue(_wavySong, WavReader.GetMetadata(path));
+                //prop.managedReferenceValue = WavReader.GetMetadata(path);
+                //_wavySong.Metadata = WavReader.GetMetadata(path);
+
+                watch.Stop();
 
                 if (displayMessages)
                 {
@@ -263,7 +272,11 @@ namespace WAVYMusicEditor
             catch (Exception)
             {
                 // Don't throw exception and instead set the metadata to null
-                _wavySong.Metadata = null;
+                _metadataField.SetValue(_wavySong, null);
+                //prop.managedReferenceValue = default(WavMetadata);
+                //_wavySong.Metadata = null;
+
+                watch.Stop();
 
                 if (displayMessages)
                 {
@@ -427,10 +440,10 @@ namespace WAVYMusicEditor
             */
 
             // Set loop point
-            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Point"), false, serializedObject.FindProperty("HaveLoop").boolValue ? () =>
+            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Point"), false, serializedObject.FindProperty("haveLoop").boolValue ? () =>
             {
                 // Get the LoopPoint property
-                serializedObject.FindProperty("LoopPoint").floatValue = time;
+                serializedObject.FindProperty("loopPoint").floatValue = time;
 
                 // Apply Modified Properties to allow undo 
                 serializedObject.ApplyModifiedProperties();
@@ -438,10 +451,10 @@ namespace WAVYMusicEditor
             : null);
 
             // Set loop start point
-            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Start Point"), false, serializedObject.FindProperty("HaveLoopStartPoint").boolValue ? () =>
+            menu.AddItem(new GUIContent($"Set \"{cue.Name}\" as Loop Start Point"), false, serializedObject.FindProperty("haveLoopStartPoint").boolValue ? () =>
             {
                 // Get the LoopStartPoint property
-                serializedObject.FindProperty("LoopStartPoint").floatValue = time;
+                serializedObject.FindProperty("loopStartPoint").floatValue = time;
 
                 // Apply Modified Properties to allow undo 
                 serializedObject.ApplyModifiedProperties();
@@ -452,10 +465,10 @@ namespace WAVYMusicEditor
             menu.AddSeparator("");
 
             // Add event
-            menu.AddItem(new GUIContent($"Add \"{cue.Name}\" as a new Event Point"), false, serializedObject.FindProperty("HaveSongEvents").boolValue  ? () =>
+            menu.AddItem(new GUIContent($"Add \"{cue.Name}\" as a new Event Point"), false, serializedObject.FindProperty("haveSongEvents").boolValue  ? () =>
             {
                 // Get the SongEvents property
-                SerializedProperty prop = serializedObject.FindProperty("SongEvents");
+                SerializedProperty prop = serializedObject.FindProperty("songEvents");
 
                 // Add a new event on the property
                 int index = prop.arraySize;
@@ -480,7 +493,9 @@ namespace WAVYMusicEditor
         {
             _wavySong = (WAVYSong)target;
 
-            _wavySong.InSongList = _list.Songs.Contains(_wavySong);
+            serializedObject.FindProperty("inSongList").boolValue = _list.Songs.Contains(_wavySong);
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            //_wavySong.InSongList = _list.Songs.Contains(_wavySong);
         }
     }
 }

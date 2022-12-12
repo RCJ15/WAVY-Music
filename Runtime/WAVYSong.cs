@@ -10,30 +10,45 @@ namespace WAVYMusic
     /// </summary>
     public class WAVYSong : ScriptableObject
     {
-        public string DisplayName = "New WAVY Song";
+        [SerializeField] private string displayName = "New WAVY Song";
+        public string DisplayName => displayName;
 
         /*
         public float BPM;
         public float BPMStartPoint = 0;
         */
 
-        public AudioClip SongClip;
+        [SerializeField] private AudioClip songClip;
+        public AudioClip SongClip => songClip;
 
-        public bool HaveTracks;
-        public AudioClip[] Tracks;
+        [SerializeField] private bool haveTracks;
+        public bool HaveTracks => haveTracks;
+        [SerializeField] private AudioClip[] tracks;
+        public AudioClip[] Tracks => tracks;
 
-        public WavMetadata Metadata;
-        public bool HaveLoop = true;
-        public double LoopPoint;
+        [SerializeField] private WavMetadata metadata;
+        public WavMetadata Metadata => metadata;
+        [SerializeField] private bool haveLoop = true;
+        public bool HaveLoop => haveLoop;
+        [SerializeField] private double loopPoint;
+        public double LoopPoint => loopPoint;
 
-        public bool HaveLoopStartPoint = false;
-        public float LoopStartPoint;
+        [SerializeField] private bool haveLoopStartPoint = false;
+        public bool HaveLoopStartPoint => haveLoopStartPoint;
+        [SerializeField] private float loopStartPoint;
+        public float LoopStartPoint => loopStartPoint;
 
-        public bool InSongList = true;
+        [SerializeField] private bool inSongList = true;
+        public bool InSongList => inSongList;
 
-        public bool HaveSongEvents = false;
-        public List<Event> SongEvents;
-        public Action<string> OnEventTrigger;
+        [SerializeField] private bool haveSongEvents = false;
+        public bool HaveSongEvents => haveSongEvents;
+        [SerializeField] private List<Event> songEvents;
+        public List<Event> SongEvents => songEvents;
+
+        public delegate void WAVYSongEventDelegate(string eventName);
+        [SerializeField] private WAVYSongEventDelegate onEventTrigger;
+        public WAVYSongEventDelegate OnEventTrigger => onEventTrigger;
 
         /// <summary>
         /// How many <see cref="WAVYMusicTrack"/> this <see cref="WAVYSong"/> has.

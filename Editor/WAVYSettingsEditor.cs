@@ -28,13 +28,13 @@ namespace WAVYMusicEditor
 
         public static bool DrawInspector(SerializedObject obj)
         {
-            EditorGUILayout.PropertyField(obj.FindProperty("MixerGroup"));
-            EditorGUILayout.PropertyField(obj.FindProperty("LoopScheduleOffset"));
+            EditorGUILayout.PropertyField(obj.FindProperty("mixerGroup"));
+            EditorGUILayout.PropertyField(obj.FindProperty("loopScheduleOffset"));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Editor Settings", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(obj.FindProperty("AutoNameSong"));
+            EditorGUILayout.PropertyField(obj.FindProperty("autoNameSong"));
             EditorGUILayout.Space();
 
             /*
@@ -44,12 +44,12 @@ namespace WAVYMusicEditor
             EditorGUILayout.Space();
             */
 
-            EditorGUILayout.PropertyField(obj.FindProperty("ShowMarkers"));
-            EditorGUILayout.PropertyField(obj.FindProperty("MarkersColor"));
+            EditorGUILayout.PropertyField(obj.FindProperty("showMarkers"));
+            EditorGUILayout.PropertyField(obj.FindProperty("markersColor"));
 
             EditorGUILayout.Space();
 
-            EditorGUILayout.PropertyField(obj.FindProperty("HideInfoBoxes"));
+            EditorGUILayout.PropertyField(obj.FindProperty("hideInfoBoxes"));
 
             return obj.ApplyModifiedProperties();
         }

@@ -25,7 +25,7 @@ namespace WAVYMusicEditor
 
             obj.UpdateIfRequiredOrScript();
 
-            SerializedProperty listProp = obj.FindProperty("Songs");
+            SerializedProperty listProp = obj.FindProperty("songs");
 
             int oldSize = listProp.arraySize;
 
