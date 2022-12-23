@@ -60,4 +60,4 @@ Now that you've setup your WAVY Songs, it's now time to actually hear your songs
 
 ![Playing the song using "WAVYSong.Play()"](https://user-images.githubusercontent.com/73841786/206932150-bd3da858-fee9-4f1f-beae-954e9ff7c71c.png)
 
-And that's it! Of course there is way more to WAVY Music than this, so if you want to go further into the WAVYness then go to this repositorys wiki and become the WAVY Master.
+And that's it! Of course there is way more to WAVY Music than this.
