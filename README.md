@@ -11,8 +11,6 @@ Please note that WAVY Music also works for other audio formats such as MP3, FLAC
 3. You're now done and ready to use WAVY Music. Yep it's that simple.
 
 # How To Use The WAV
-**Please note:** This section only goes into surface level detail of what WAVY Music does and what it's uses are. For concrete documentation that actually explains everything in full detail, please visit this repository's wiki.
-
 WAVY Music uses scriptable objects to store it's song information. So to get started, you create a new WAVY Song scriptable object by right clicking in your projects tab and go to "Create/WAVY Song", you can then name your song to anything that fits.
 
 ![Creating a WAVY Song Asset and renaming it](https://user-images.githubusercontent.com/73841786/206930664-6470aa55-1596-428e-b075-c96f6ff717aa.png)
