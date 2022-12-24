@@ -1,6 +1,3 @@
-# IMPORTANT NOTE
-This project is currently unifinished. Development will be finished before 2023. That I can promise.
-
 # What's The WAV All About?
 WAVY Music is a music tool for Unity which takes advantage of the fact that WAV files store audio markers. Using this technology, WAVY Music can read directly from your WAV file and pinpoint exactly where you placed you marker so you can execute events at the markers position and even create seamless loops for your songs.
 Please note that WAVY Music also works for other audio formats such as MP3, FLAC and OGG. WAV is just recommended for it's usage of markers (which are also called audio cues).
@@ -60,4 +57,4 @@ Now that you've setup your WAVY Songs, it's now time to actually hear your songs
 
 ![Playing the song using "WAVYSong.Play()"](https://user-images.githubusercontent.com/73841786/206932150-bd3da858-fee9-4f1f-beae-954e9ff7c71c.png)
 
-And that's it! Of course there is way more to WAVY Music than this.
+And that is the basics of WAVYMusic!

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mixerGroup: {fileID: 0}
   loopScheduleOffset: 1
-  editorExpanded: 1
+  editorExpanded: 0
   autoNameSong: 1
   showMarkers: 1
   markersColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
